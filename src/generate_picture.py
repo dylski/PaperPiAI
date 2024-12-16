@@ -13,8 +13,8 @@ parser.add_argument("output_dir", help="Directory to save the output images")
 args = parser.parse_args()
 
 # Set the paths
-installed_dir = "/home/dylski/Projects/PaperPiAI"
-installed_dir = "./"
+installed_dir = "/home/nathan/Projects/PaperPiAI"
+#installed_dir = "./"
 sd_bin = f"{installed_dir}/OnnxStream/src/build/sd"
 sd_model = f"{installed_dir}/stable_diffusion_models/stable-diffusion-xl-turbo-1.0-onnxstream"
 
