@@ -30,7 +30,7 @@ Then restart swap with `sudo /etc/init.d/dphys-swapfile restart`
 
 ## Enable E-paper interfaces
 
-run `sudo rasp-config` and enable **SPI interface** and **Ic2 interface**
+run `sudo raspi-config` and enable **SPI interface** and **Ic2 interface**
 
 ## Install required components
 
