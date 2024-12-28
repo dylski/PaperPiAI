@@ -61,7 +61,9 @@ Note that if you install the python packages into a virtual env (as the script a
 
 `<install_path>/venv/bin/python PaperPiAI/src/generate_picture.py /tmp`
 
-To send to the display use `python PaperPiAI/src/display_picture.py <image_name>`. Use the `-p` flag if the display is in portrait mode.
+By default, the image will be 800x480 pixels. If you want to generate a portrait image or a different sized image, pass `--width` and `--height` appropriately.
+
+To send to the display use `python PaperPiAI/src/display_picture.py <image_name>`. Use the `-p` flag if the display is in portrait mode. Use `--width` and `--height` to specify the size of the display (in landscape view) if necessary. The defaults are 800 and 480 respectively.
 
 To automate this I make a script that runs these two commands in sequence and put an entry in crontab to call it once a day.
 

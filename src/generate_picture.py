@@ -10,8 +10,8 @@ def usage():
 
 parser = argparse.ArgumentParser(description="Generate a new random picture.")
 parser.add_argument("output_dir", help="Directory to save the output images")
-parser.add_argument("--width", default=480, help="The width of the image to generate")
-parser.add_argument("--height", default=800, help="The height of the image to generate")
+parser.add_argument("--width", default=800, help="The width of the image to generate")
+parser.add_argument("--height", default=480, help="The height of the image to generate")
 args = parser.parse_args()
 
 # Set the paths
