@@ -48,7 +48,4 @@ cmake --build . --config Release
 cd "$INSTALL_DIR"
 mkdir models
 cd models
-git clone --depth=1 https://huggingface.co/AeroX2/stable-diffusion-xl-turbo-1.0-onnxstream
-
-
-
+git clone --depth=1 https://huggingface.co/vitoplantamura/stable-diffusion-xl-turbo-1.0-anyshape-onnxstream

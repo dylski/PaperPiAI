@@ -10,13 +10,15 @@ def usage():
 
 parser = argparse.ArgumentParser(description="Generate a new random picture.")
 parser.add_argument("output_dir", help="Directory to save the output images")
+parser.add_argument("--width", default=480, help="The width of the image to generate")
+parser.add_argument("--height", default=800, help="The height of the image to generate")
 args = parser.parse_args()
 
 # Set the paths
 installed_dir = "/home/dylski/Projects/PaperPiAI"
 installed_dir = "./"
 sd_bin = f"{installed_dir}/OnnxStream/src/build/sd"
-sd_model = f"{installed_dir}/stable_diffusion_models/stable-diffusion-xl-turbo-1.0-onnxstream"
+sd_model = f"{installed_dir}/models/stable-diffusion-xl-turbo-1.0-anyshape-onnxstream"
 
 output_dir = args.output_dir
 shared_file = 'output.png'
@@ -77,6 +79,7 @@ cmd = [
     "--seed", str(seed),
     "--output", fullpath,
     "--steps", str(steps)
+    "--res", f"{args.width}x{args.height}"
 ]
 
 # Run the command
