@@ -99,18 +99,23 @@ if __name__ == "__main__":
     ap.add_argument("-r", "--resize_only", action="store_true",
                     default=False, help="Simply resize image to display ignoring aspect ratio")
     ap.add_argument("-s", "--simulate_display", action="store_true",
-                    default=False, help="Do not interact with e-paper display")
+                    default=False, help="Do not interact with e-paper display to get resolution")
     ap.add_argument("--width", default=800, help="The width of the display")
     ap.add_argument("--height", default=480, help="The height of the display")
     args = vars(ap.parse_args())
 
+    disp_w, disp_h = args["width"], args["height"]
     simulate_display = args["simulate_display"]
 
+    # Get resolution from Inky
     if not simulate_display:
         inky = auto(ask_user=True, verbose=True)
+        disp_w, disp_h = inky.resolution
 
-    (disp_w, disp_h) = (args["height"], args["width"]) if args["portrait"] else (args["width"], args["height"])
-    
+    # Swap axes for portrait orientation
+    if args["portrait"]:
+        disp_w, disp_h = disp_h, disp_w
+
     image = load_image(args["image"])
     if args["resize_only"]:
         print(f"Resizing to {disp_w}x{disp_h}")

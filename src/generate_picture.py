@@ -78,7 +78,7 @@ cmd = [
     "--prompt", f"{subject} {art_style}",
     "--seed", str(seed),
     "--output", fullpath,
-    "--steps", str(steps)
+    "--steps", str(steps),
     "--res", f"{args.width}x{args.height}"
 ]
 
