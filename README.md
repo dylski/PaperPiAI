@@ -1,7 +1,7 @@
-# News
+# Updates
 
-* 1st Jan 2025: Added support for OnnxStream's new custom resolutions!
-Special thanks to [Vito Plantamura](https://github.com/vitoplantamura) and [Delph](https://github.com/Delph).
+* 1st Jan 2025: Added support for OnnxStream's new custom resolutions and updated some documentation.
+Special thanks to [Vito Plantamura](https://github.com/vitoplantamura), [Delph](https://github.com/Delph) and [Roger](https://github.com/g7ruh)
 
 # PaperPiAI - Raspberry Pi Zero Generative Art E-Paper Frame
 
@@ -64,7 +64,8 @@ run `sudo raspi-config` and enable **SPI interface** and **I2C interface**
 Firstly download this repo somewhere with:
 
 ``` cd ~/ sudo apt install git git clone
-https://github.com/dylski/PaperPiAI.git ```
+https://github.com/dylski/PaperPiAI.git
+```
 
 `PaperPiAI/scripts/install.sh` has all the commands needed to install all the
 required system packages, python libraries and
@@ -77,7 +78,10 @@ The whole process takes a _long_ time, i.e. several hours. If you are building
 in a RPi 4 or 5 you can speed it up by appending ` -- -j4`  or ` -- -all` to
 the `cmake --build . --config Release` lines in `install.sh`. This instructs
 the compiler to use four cores or all cores, respectively. This speed up does
-not work on the RPi Zero 2 as it only has 512MB RAM.
+not work on the RPi Zero 2 as it only has 512MB RAM. Also note that 8GB of
+model parameters will be downloaded. Depending on your wifi signal and braodband
+speed this can also take a long time. It is recommended to position the RPi such
+that the e-ink display does not impair the wifi signal!
 
 Once installed, you need to edit the `installed_dir` path in
 `PaperPiAI/src/generate_picture.py` to point to you installed everything, i.e.
@@ -107,7 +111,10 @@ above does) then you need to use that python instance, e.g.:
 ## Displaying
 
 To send to the display use `python PaperPiAI/src/display_picture.py -r
-<image_name>`.
+<image_name>`
+
+Tie `-r` option skips any intelligent cropping (as this is no longer needed)
+and just resizes the image to make sure it fits the display.
 
 
 ## Portrait display
