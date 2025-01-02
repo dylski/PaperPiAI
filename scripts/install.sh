@@ -20,11 +20,6 @@ python -m pip install opencv_contrib_python
 python -m pip install inky[rpi]==1.5.0
 python -m pip install pillow
   
-# NOTE: Before building increase swap file size to 256!
-# sudo vim /etc/dphys-swapfile
-#   change CONF_SWAPSIZE to 256
-# sudo /etc/init.d/dphys-swapfile restart
-
 # Following instructions taken directly from [OnnxStream repo](https://github.com/vitoplantamura/OnnxStream).
 
 cd "$INSTALL_DIR"
