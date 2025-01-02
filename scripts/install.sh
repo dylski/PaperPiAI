@@ -20,11 +20,6 @@ python -m pip install opencv_contrib_python
 python -m pip install inky[rpi]==1.5.0
 python -m pip install pillow
   
-# NOTE: Before building increase swap file size to 256!
-# sudo vim /etc/dphys-swapfile
-#   change CONF_SWAPSIZE to 256
-# sudo /etc/init.d/dphys-swapfile restart
-
 # Following instructions taken directly from [OnnxStream repo](https://github.com/vitoplantamura/OnnxStream).
 
 cd "$INSTALL_DIR"
@@ -48,7 +43,4 @@ cmake --build . --config Release
 cd "$INSTALL_DIR"
 mkdir models
 cd models
-git clone --depth=1 https://huggingface.co/AeroX2/stable-diffusion-xl-turbo-1.0-onnxstream
-
-
-
+git clone --depth=1 https://huggingface.co/vitoplantamura/stable-diffusion-xl-turbo-1.0-anyshape-onnxstream
