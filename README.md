@@ -105,8 +105,7 @@ called 'output.png' to make it simple to display.
 Note that if you install the python packages into a virtual env (as the script
 above does) then you need to use that python instance, e.g.:
 
-`<install_path>/venv/bin/python PaperPiAI/src/generate_picture.py --width=800
---height=480 /tmp`
+`<install_path>/venv/bin/python PaperPiAI/src/generate_picture.py --width=800 --height=480 /tmp`
 
 ## Displaying
 
@@ -115,7 +114,6 @@ To send to the display use `python PaperPiAI/src/display_picture.py -r
 
 Tie `-r` option skips any intelligent cropping (as this is no longer needed)
 and just resizes the image to make sure it fits the display.
-
 
 ## Portrait display
 
@@ -132,12 +130,15 @@ and
 ## Automating
 
 To automate this I make a script that runs these two commands in sequence and
-put an entry in crontab to call it once a day.
+put an entry in crontab to call it once a day. Note that e-paper displays are
+suspectible to temperature. The Pi Zero will get hot for an extended period of
+time which can cause the display to render with some discoloration which can be
+avoided by delaying the display update after generating the image.
 
 # Storage
 
-All the generated images are currently retained locally. Each image is ~770KB,
-so generating an image every 24 hours for 3.5 years would take up ~1GB storage.
+All the generated images are currently retained locally. Each image is ~1.2MB (assuming 800x480px resolution),
+so generating an image every 24 hours for 2.25 years would take up ~1GB storage.
 If you are generating images at a faster rate and/or storage is limited then
 this would lead to issues.
 
