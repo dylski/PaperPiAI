@@ -72,11 +72,13 @@ def plot_julia_set(c, window_size, width, height, max_iter=40,
       img = 1 - img
 
   if colourmap == "RANDOM":
-      cmap_names = [
-              'YlOrRd', 'YlGnBu', 'YlGn', 'Wistia', 'autumn', 'Spectral',
-              #'YlOrRd', 'YlGnBu', 'YlGn', #'Wistia', 'autumn',  'Spectral',
-              'viridis', 'magma', 'plasma', 'inferno', 'cividis', 'turbo',
-              'twilight', 'twilight_shifted', "hot" ]
+      cmap_names = ['cool', 'twilight', 'magma', 'cividis', 'vanimo', 
+              'afmhot', 'hsv', 'YlGn', 'autumn', 'Spectral', 'coolwarm', 
+              'inferno', 'seismic', 'managua', 'pink', 'summer', 'YlOrRd', 
+              'twilight_shifted', 'winter', 'copperPiYG', 'PuOr', 'plasma', 
+              'gist_heat', 'Wistia', 'BrBG', 'berlin', 'hot', 'turbo', 'bwr', 
+              'RdYlGn', 'viridis', 'RdGy', 'YlGnBu', 'RdBu', 'RdYlBu', 'spring', 
+              'PRGn']
       colourmap = random.choice(cmap_names)
 
   # Apply colormap
@@ -91,7 +93,7 @@ def plot_julia_set(c, window_size, width, height, max_iter=40,
   if save_base:
       # Create and save the image using PIL
       image = Image.fromarray(img_colored)
-      save_path = f"{save_base}_{colourmap}_i{invert}.png"
+      save_path = f"{save_base}_{colourmap}_i{invert}_b{bands}.png"
       image.save(save_path)
       print("Saved", save_path)
 
