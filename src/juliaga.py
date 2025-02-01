@@ -136,17 +136,15 @@ def metric_symmetry(grey_image):
     symmetry = 1 / (h_diff + v_diff + 1e-6)
     return symmetry
 
-#@title Julia GA
-import random
-
 def fitness_function(c, window_size, width=100, height=60, bands=0, max_iter=40):
+    # For grey, using image processing metrics
     img = julia_set(c, window_size, width, height, bands, max_iter).astype(np.float32)
     fitness_score = shannon_entropy(img)
     #fitness_score *= metric_contrast(img)
-
     #fitness_score = metric_fractal_dim(img)
     #fitness_score *= metric_symmetry(img)
     return fitness_score, img
+
 
 def initialize_population(pop_size, max_iter):
     """Initialize a population with random complex numbers and window sizes."""
@@ -218,6 +216,36 @@ def select(population, fitness_values, num_parents):
     sorted_population = [x for _, x in sorted(zip(fitness_values, population), reverse=True)]
     return sorted_population[:num_parents]
 
+def select_tournaments(population, fitness_values, num_parents):
+    """Select the individuals based on fitness tournaments. A tournament for each parent."""
+
+    tournament_size = len(population) // num_parents
+    remainder = len(population) % num_parents
+    fitness_values += np.random.uniform(0, 0.00001, size=len(fitness_values))  # Break ties
+
+    # Shuffle *indices*, not the population itself.
+    population_indices = list(range(len(population)))
+    random.shuffle(population_indices)
+
+    winners = []
+    start_i = 0
+    for t in range(num_parents):
+        end_i = start_i + tournament_size + (1 if t < remainder else 0)
+
+        # Get the contestants using the shuffled indices
+        contestant_indices = population_indices[start_i:end_i]
+        contestants = [population[i] for i in contestant_indices]
+        contestant_fitnesses = [fitness_values[i] for i in contestant_indices]
+
+        if contestants: # Check if there are any contestants (important for edge cases).
+            winner_index = contestant_indices[np.argmax(contestant_fitnesses)]  # Index of the winner in original population
+            winner = population[winner_index] # Get the winner from the original population
+            winners.append(winner)
+
+        start_i = end_i
+
+    return winners
+
 def genetic_algorithm(pop_size, generations, max_iter, save_tiled_base=None, plot=False):
     if plot:
         import display_manager as dm
@@ -248,12 +276,14 @@ def genetic_algorithm(pop_size, generations, max_iter, save_tiled_base=None, plo
         display.update_scatter(0, fitness_history)
 
     for generation in range(generations):
+        #parents = select_tournaments(population, fitness_values, pop_size // 2)
         parents = select(population, fitness_values, pop_size // 2)
 
         # Crossover
         next_generation = []
-        for i in range(0, len(parents), 2):
-            parent1, parent2 = parents[i], parents[i+1]
+        for i in range(0, len(parents)):
+            i_neighbour = (i + 1) % len(parents)
+            parent1, parent2 = parents[i], parents[i_neighbour]
             child = crossover(parent1, parent2)
             next_generation.append(child)
 
@@ -287,14 +317,16 @@ def genetic_algorithm(pop_size, generations, max_iter, save_tiled_base=None, plo
 if __name__ == "__main__":
 
     ap = argparse.ArgumentParser()
-    ap.add_argument("-s", "--save_dir", default="./",
+    ap.add_argument("-s", "--save_dir", default="",
         help="Save path for iamges")
     ap.add_argument("-g", "--generations",
-                    default=10, help="Number of generations")
+                    default=3, help="Number of generations")
     ap.add_argument("-p", "--population",
-                    default=10, help="Size of population")
+                    default=12, help="Size of population")
     ap.add_argument("-t", "--tiled", action="store_true",
                     default=False, help="Save tiled population images")
+    ap.add_argument("-d", "--display", action="store_true",
+                    default=False, help="Display GA populations")
     ap.add_argument("--width", default=800, help="The width of the display")
     ap.add_argument("--height", default=480, help="The height of the display")
     args = vars(ap.parse_args())
@@ -303,7 +335,7 @@ if __name__ == "__main__":
     # Run the genetic algorithm
     best_individual = genetic_algorithm(
             pop_size=int(args["population"]), generations=int(args["generations"]),
-            max_iter=140, save_tiled_base=None)
+            max_iter=140, save_tiled_base=None, plot=args["display"])
 
     # Plot the best Julia set found, scaled to 800x480
     c, window_size, iteration, bands = best_individual
@@ -311,6 +343,7 @@ if __name__ == "__main__":
     _, save_path = plot_julia_set(c, window_size, width=800, height=480, bands=bands, max_iter=iteration,
                    colourmap="RANDOM", save_base=args["save_dir"])
 
-    shared_fullpath = os.path.join(args["save_dir"], "output.png")
-    shutil.copyfile(save_path, shared_fullpath)
-    print(f"Copied to {shared_fullpath}") 
+    if args["save_dir"]:
+        shared_fullpath = os.path.join(args["save_dir"], "output.png")
+        shutil.copyfile(save_path, shared_fullpath)
+        print(f"Copied to {shared_fullpath}") 
