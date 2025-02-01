@@ -93,7 +93,7 @@ def plot_julia_set(c, window_size, width, height, max_iter=40,
   if save_base:
       # Create and save the image using PIL
       image = Image.fromarray(img_colored)
-      save_path = f"{save_base}_{colourmap}_i{invert}_b{bands}.png"
+      save_path = f"{save_base}/julia_set,c_{c},iter_{max_iter},w_{window_size},cmap_{colourmap},inv_{invert},b_{bands}.png"
       image.save(save_path)
       print("Saved", save_path)
 
