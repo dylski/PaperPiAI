@@ -5,46 +5,58 @@ import numpy as np
 
 class DisplayManager:
     def __init__(self, num_images=0, num_plots=1, figsize=None):
-        # Calculate default figure size if not provided
         if figsize is None:
             figsize = (5 * (num_images + num_plots), 5)
-        
-        # Create figure and subplots
+
         self.fig, axes = plt.subplots(1, num_images + num_plots, figsize=figsize)
-        # Ensure axes is always a list even with single subplot
         self.axes = [axes] if num_images + num_plots == 1 else axes
-        
-        self.scatter_points = {}  # Store scatter plot points
-        self.mean_points = {}    # Store mean points
-        
+
+        self.scatter_points = {}
+        self.mean_points = {}
+
         self.num_images = num_images
 
-        # Initialize displays
         for i, ax in enumerate(self.axes):
             if i < num_images:
-                # Initialize image display
-                display = ax.imshow(np.random.uniform(size=(100, 100)).astype(float),
-                                    cmap="twilight_shifted")
-                plt.colorbar(display, ax=ax)
-                #ax.set_title(f'Image {i+1}')
+                # Initialize image display, handling both grayscale and RGB
+                initial_image = np.random.uniform(size=(100, 100, 3)).astype(float) # Default to RGB for initialization
+                self.image_displays = [] # List to store image display objects
+
+                display = ax.imshow(initial_image) # No cmap for RGB
+                self.image_displays.append(display) # Store the image display object
+                # No colorbar for RGB
+
             else:
-                # Initialize scatter plot
                 ax.set_title('Fitness History')
                 ax.set_xlabel('Generation')
-                ax.ylabel = 'Fitness'
+                ax.set_ylabel('Fitness')  # Corrected y-axis label
                 ax.grid(True)
-                
-                # Store the axis for later use
+
                 plot_index = i - num_images
-                self.scatter_points[plot_index] = []  # List to store scatter points
-                self.mean_points[plot_index] = []     # List to store mean points
-        
+                self.scatter_points[plot_index] = []
+                self.mean_points[plot_index] = []
+
         plt.tight_layout()
         plt.show(block=False)
 
     def update_image(self, index, new_image):
-        """Update image at given index"""
-        self.axes[index].images[0].set_array(new_image)
+        """Update image at given index, handling grayscale and RGB."""
+        if new_image.ndim == 2:  # Grayscale image
+            #if self.axes[index].images[0].get_cmap() is None: # Check if it's RGB
+            #    self.axes[index].images[0].set_cmap("twilight_shifted") # Set cmap if it's grayscale
+            self.axes[index].images[0].set_data(new_image)
+        elif new_image.ndim == 3:  # RGB image
+            #if self.axes[index].images[0].get_cmap() is not None: # Check if it's grayscale
+            #    self.axes[index].images[0].set_cmap(None) # Remove cmap if it's RGB
+            self.axes[index].images[0].set_data(new_image)
+        else:
+            raise ValueError("Image must be 2D (grayscale) or 3D (RGB)")
+
+        self.axes[index].images[0].set_clim(
+                vmin=new_image.min(), vmax=new_image.max()) # Ensure correct scaling
+
+        self.axes[index].relim() # Recalculate limits
+        self.axes[index].autoscale_view() # Autoscale the view
         self.fig.canvas.draw()
         self.fig.canvas.flush_events()
 
@@ -85,16 +97,6 @@ class DisplayManager:
             mean_scatter = ax.scatter(i, np.mean(inner_list), cmap='red')
             self.mean_points[plot_index].append(mean_scatter)
         
-        # Update axis limits if needed
-        #ax.set_xlim(-0.5, generation + 0.5)
-        #ax.set_xticks(range(generation + 1))
-        
-        # Update y limits if needed
-        # all_values = [val for gen in generation_data for val in (gen if isinstance(gen, list) else [gen])]
-        # if all_values:
-        #     ymin, ymax = min(all_values), max(all_values)
-        margin = (ymax - ymin) * 0.1  # Add 10% margin
-        ax.set_ylim(ymin - margin, ymax + margin)
         
         self.fig.canvas.draw()
         self.fig.canvas.flush_events()

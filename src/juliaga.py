@@ -1,5 +1,6 @@
 #@title Jula make and plot
 import argparse
+import clip
 import numpy as np
 import matplotlib.pyplot as plt
 import os
@@ -7,6 +8,15 @@ from PIL import Image
 import random
 import shutil
 from skimage.measure import shannon_entropy
+import torch
+
+cmap_names = ['cool', 'twilight', 'magma', 'cividis', 'vanimo', 
+      'afmhot', 'hsv', 'YlGn', 'autumn', 'Spectral', 'coolwarm', 
+      'inferno', 'seismic', 'managua', 'pink', 'summer', 'YlOrRd', 
+      'twilight_shifted', 'winter', 'copper', 'PiYG', 'PuOr', 'plasma', 
+      'gist_heat', 'Wistia', 'BrBG', 'berlin', 'hot', 'turbo', 'bwr', 
+      'RdYlGn', 'viridis', 'RdGy', 'YlGnBu', 'RdBu', 'RdYlBu', 'spring', 
+      'PRGn']
 
 def julia_set(c, window_size, width, height, bands, max_iter=40):
     """Generate a Julia set image with a dynamic window around the complex number c."""
@@ -41,7 +51,7 @@ def julia_set(c, window_size, width, height, bands, max_iter=40):
 
 
 def plot_julia_set(c, window_size, width, height, max_iter=40,
-                   colourmap=None, invert=None, bands=0, save_base=None):
+                   colourmap=None, invert=False, bands=0, save_base=None):
   """
   Generates and saves a Julia set image.
 
@@ -59,71 +69,62 @@ def plot_julia_set(c, window_size, width, height, max_iter=40,
   Returns:
     None.
   """
-  if invert is None:
-      invert = random.choice([True, False])
   aspect_ratio = height / width
 
   # Generate the Julia set image
   img = julia_set(c, window_size, width, height, bands, max_iter)
   img = img.astype(float)
   img -= np.min(img)
-  img /= np.max(img)
+  max_val = np.max(img)
+  if max_val:
+    img /= max_val 
   if invert:
       img = 1 - img
 
-  if colourmap == "RANDOM":
-      cmap_names = ['cool', 'twilight', 'magma', 'cividis', 'vanimo', 
-              'afmhot', 'hsv', 'YlGn', 'autumn', 'Spectral', 'coolwarm', 
-              'inferno', 'seismic', 'managua', 'pink', 'summer', 'YlOrRd', 
-              'twilight_shifted', 'winter', 'copperPiYG', 'PuOr', 'plasma', 
-              'gist_heat', 'Wistia', 'BrBG', 'berlin', 'hot', 'turbo', 'bwr', 
-              'RdYlGn', 'viridis', 'RdGy', 'YlGnBu', 'RdBu', 'RdYlBu', 'spring', 
-              'PRGn']
-      colourmap = random.choice(cmap_names)
+  assert colourmap is not None and colourmap != "RANDOM"
 
-  # Apply colormap
   if colourmap:
     cmap = plt.get_cmap(colourmap)
-    img_colored = cmap(img)[:, :, :3]  # Extract RGB channels
-    img_colored = (img_colored * 255).astype(np.uint8)
+    img_coloured = cmap(img)[:, :, :3]  # Extract RGB channels
+    img_coloured = (img_coloured * 255).astype(np.uint8)
   else:
-    img_colored = (img * 255).astype(np.uint8)  # Grayscale
+    img_coloured = (img * 255).astype(np.uint8)  # Grayscale
 
   save_path = None
   if save_base:
       # Create and save the image using PIL
-      image = Image.fromarray(img_colored)
+      image = Image.fromarray(img_coloured)
       save_path = f"{save_base}/julia_set,c_{c},iter_{max_iter},w_{window_size},cmap_{colourmap},inv_{invert},b_{bands}.png"
       image.save(save_path)
       print("Saved", save_path)
 
-  return img, save_path
-
-# # # Example usage
-# c = complex(-0.76, 0.07)
-# window_size = 2
-# width = 500
-# height = 500
-# plot_julia_set(c, window_size, width, height, colourmap="RANDOM")
-# 
-# exit(0)
+  return img_coloured, save_path
 
 def tile_images(images):
   tile_w = int(np.ceil(np.sqrt(len(images))))
   tile_h = int(np.ceil(len(images) / tile_w))
-  tile_image = np.zeros((tile_h * images[0].shape[0], tile_w * images[0].shape[1]), dtype=np.float32)
+  if images[0].ndim == 2:
+    tile_image = np.zeros(
+            (tile_h * images[0].shape[0], 
+             tile_w * images[0].shape[1]), dtype=np.float32)
+  else:
+    tile_image = np.zeros(
+            (tile_h * images[0].shape[0],
+             tile_w * images[0].shape[1], 
+             3), dtype=np.float32)
   for i, image in enumerate(images):
     image = image.astype(np.float32)
     x = (i % tile_w) * images[0].shape[1]
     y = (i // tile_w) * images[0].shape[0]
     image -= np.min(image)
-    image /= np.max(image)
+    max_val = np.max(image)
+    if max_val:
+      image /= max_val 
     tile_image[y:y+images[0].shape[0], x:x+images[0].shape[1]] = image
   return tile_image
 
 def metric_shannon(grey_image):
     return shannon_entropy(grey_image)  # Higher entropy is better
-
 
 def metric_contrast(grey_image):
     return np.std(grey_image)
@@ -136,15 +137,56 @@ def metric_symmetry(grey_image):
     symmetry = 1 / (h_diff + v_diff + 1e-6)
     return symmetry
 
-def fitness_function(c, window_size, width=100, height=60, bands=0, max_iter=40):
+def fitness_function(c, window_size, bands, max_iter, cmap=None, width=100, height=60):
     # For grey, using image processing metrics
-    img = julia_set(c, window_size, width, height, bands, max_iter).astype(np.float32)
-    fitness_score = shannon_entropy(img)
+    #img = julia_set(c, window_size, width, height, bands, max_iter).astype(np.float32)
+    img, _ = plot_julia_set(
+            c, window_size, width=100, height=60,
+            bands=bands, max_iter=max_iter, colourmap=cmap)  #, save_base="/tmp")
+    grey = img.mean(axis=2)
+    fitness_score = shannon_entropy(grey)
     #fitness_score *= metric_contrast(img)
     #fitness_score = metric_fractal_dim(img)
     #fitness_score *= metric_symmetry(img)
     return fitness_score, img
 
+"""
+CLIP compare on 
+    Option 1 (Simplest): "A beautiful and aesthetic image."
+    Option 2 (Slightly More Detail): "Beautiful, artistic, and inspiring imagery."
+    Option 3 (Focusing on Visuals): "Vibrant, elegant, and visually stunning."
+    Option 4 (Adding Style Hints): "Classic and modern aesthetic design."
+    Option 5 (Evoking Feelings): "Joyful and inspiring aesthetic art."
+    Option 6 (A touch more comprehensive): "Beautiful art, design, and nature."
+"""
+
+def fitness_function_clip(c, window_size, bands, max_iter, cmap):
+    img, _ = plot_julia_set(
+            c, window_size, width=224, height=134,
+            bands=bands, max_iter=max_iter, colourmap=cmap)
+    prompt = "Beautiful, artistic, detailed, stunning."
+    fitness_score = clip_match(img, prompt)
+    return fitness_score, img
+
+text_features = None
+def clip_match(image, prompt):
+    global text_features
+
+    device = "cuda" if torch.cuda.is_available() else "cpu"
+    model, preprocess = clip.load("ViT-B/32", device)
+    
+    image = Image.fromarray(image)
+    image = preprocess(image).unsqueeze(0).to(device)
+    if text_features is None:
+        text = clip.tokenize([prompt]).to(device)
+    
+    with torch.no_grad():
+        image_features = model.encode_image(image)
+        if text_features is None:
+            text_features = model.encode_text(text)
+    
+    similarity = torch.cosine_similarity(image_features, text_features)
+    return similarity.item()
 
 def initialize_population(pop_size, max_iter):
     """Initialize a population with random complex numbers and window sizes."""
@@ -155,55 +197,76 @@ def initialize_population(pop_size, max_iter):
         complex_num = complex(real, imag)
         window_size = random.uniform(1.0, 2.0)  # Start with a random window size
         iterations = random.randint(40, max_iter)  # Random number of iterations
-        bands = random.randint(5, 23)  # Random number of iterations
-        population.append((complex_num, window_size, iterations, bands))
+        bands = random.randint(5, 140)  # Random number of iterations
+        cmap = random.choice(cmap_names)
+        population.append((complex_num, window_size, iterations, bands, cmap))
     return population
 
 def crossover(parent1, parent2):
     """Create a child by mixing the 'c' values and window sizes of two parents."""
-    c_real = (parent1[0].real + parent2[0].real) / 2
-    c_imag = (parent1[0].imag + parent2[0].imag) / 2
-    c = complex(c_real, c_imag)
+    crossover_prob = 0.1
 
-    window_size = random.uniform(min(parent1[1], parent2[1]), max(parent1[1], parent2[1]))
-    iterations = random.randint(min(parent1[2], parent2[2]), max(parent1[2], parent2[2]))
-    bands = random.randint(min(parent1[3], parent2[3]), max(parent1[3], parent2[3]))
+    if np.random.uniform(0, 1) < crossover_prob:
+        c_real = (parent1[0].real + parent2[0].real) / 2
+        c_imag = (parent1[0].imag + parent2[0].imag) / 2
+        c = complex(c_real, c_imag)
+    else:
+        c = random.choice([parent1[0], parent2[0]])
 
-    return (c, window_size, iterations, bands)
+    if np.random.uniform(0, 1) < crossover_prob:
+        window_size = random.uniform(min(parent1[1], parent2[1]), max(parent1[1], parent2[1]))
+    else:
+        window_size = random.choice([parent1[1], parent2[1]])
+
+    if np.random.uniform(0, 1) < crossover_prob:
+        iterations = random.randint(min(parent1[2], parent2[2]), max(parent1[2], parent2[2]))
+    else:
+        iterations = random.choice([parent1[2], parent2[2]])
+
+    if np.random.uniform(0, 1) < crossover_prob:
+        bands = random.randint(min(parent1[3], parent2[3]), max(parent1[3], parent2[3]))
+    else:
+        bands = random.choice([parent1[3], parent2[3]])
+
+    if np.random.uniform(0, 1) < crossover_prob:
+        cmap = random.choice([parent1[4], parent2[4]])
+    else:
+        cmap  = random.choice([parent1[4], parent2[4]])
+
+    return (c, window_size, iterations, bands, cmap)
 
 def mutate(individual):
     """Mutate an individual by randomly changing the complex constant 'c' and window size."""
     mutation_rate = 4
-    mutation_type = random.choice(['complex', 'window', 'iterations', 'bands'])
+    mutation_type = random.choice(['complex', 'window', 'iterations', 'bands', 'cmap'])
+
+    # Mutate the number of bands
+    individual = [individual[0],
+                  individual[1],
+                  individual[2],
+                  individual[3],
+                  individual[4],
+                  ]
     if mutation_type == 'complex':
         # Mutate the complex constant 'c' by a small random change
-        individual = (individual[0] + random.uniform(-0.55, 0.55) * mutation_rate 
-                      + 1j * random.uniform(-0.55, 0.55) * mutation_rate,
-                      individual[1],
-                      individual[2],
-                      individual[3],
-                      )
+        #individual[0] += (random.uniform(-0.55, 0.55) * mutation_rate 
+        #                  + 1j * random.uniform(-0.55, 0.55) * mutation_rate)
+
+        individual[0] = individual[0] + random.uniform(-0.55, 0.55) * mutation_rate + 1j * random.uniform(-0.55, 0.55) * mutation_rate
+
     elif mutation_type == 'window':
-        # Mutate the window size slightly
-        individual = (individual[0],
-                      individual[1] + random.uniform(-0.1, 0.1) * mutation_rate,
-                      individual[2],
-                      individual[3],
-                      )
+        individual[1] += random.uniform(-0.1, 0.1) * mutation_rate
+
     elif mutation_type == 'iterations':
-        # Mutate the number of iterations
-        individual = (individual[0],
-                      individual[1],
-                      max(40, individual[2] + random.randint(-10, 10) * mutation_rate),
-                      individual[3],
-                      )
+        individual[2] = max(
+            40, individual[2] + random.randint(-10, 10) * mutation_rate)
+
     elif mutation_type == 'bands':
-        # Mutate the number of bands
-        individual = (individual[0],
-                      individual[1],
-                      individual[2],
-                      min(23, max(5, individual[3] + random.randint(-10, 10) * mutation_rate)),
-                      )
+        individual[3] = min(
+            140, max(5, individual[3] + random.randint(-10, 10) * mutation_rate))
+
+    elif mutation_type == 'cmap':
+        individual[4] = random.choice(cmap_names)
     else:
         raise ValueError("Invalid mutation type")
 
@@ -246,6 +309,8 @@ def select_tournaments(population, fitness_values, num_parents):
 
     return winners
 
+CLIP = True  # False  # True
+
 def genetic_algorithm(pop_size, generations, max_iter, save_tiled_base=None, plot=False):
     if plot:
         import display_manager as dm
@@ -255,7 +320,10 @@ def genetic_algorithm(pop_size, generations, max_iter, save_tiled_base=None, plo
         
     fitness_history = []
     population = initialize_population(pop_size, max_iter)
-    fitness_imgs = [fitness_function(ind[0], ind[1], max_iter=ind[2], bands=ind[3]) for ind in population]
+    if CLIP:
+        fitness_imgs = [fitness_function_clip(ind[0], ind[1], max_iter=ind[2], bands=ind[3], cmap=ind[4]) for ind in population]
+    else:
+        fitness_imgs = [fitness_function(ind[0], ind[1], max_iter=ind[2], bands=ind[3], cmap=ind[4]) for ind in population]
     fitness_values, images = zip(*fitness_imgs)
     tiled = (tile_images(images) * 255).astype(np.uint8)
     if save_tiled_base:
@@ -264,20 +332,22 @@ def genetic_algorithm(pop_size, generations, max_iter, save_tiled_base=None, plo
     if display:
         display.update_image(0, tiled)
     print(f"Generation 0: Best fitness = {max(fitness_values)}")
-    c, window_size, iteration, bands = population[fitness_values.index(max(fitness_values))]
-    print(f"c={c}, window_size={window_size}, iteration={iteration}, bands={bands}")
+    c, window_size, iteration, bands, cmap = population[fitness_values.index(max(fitness_values))]
+    print(f"c={c}, window_size={window_size}, iteration={iteration}, bands={bands}, cmap={cmap}")
     best_image, _ = plot_julia_set(c, window_size, bands=bands, width=100, height=60,
-                                colourmap="twilight", max_iter=iteration)
+                                colourmap=cmap, max_iter=iteration)
     if display:
         display.update_image(1, best_image)
     fitness_history.append(fitness_values)
+    np.save("/tmp/fitness_history", fitness_history)
+
     #plot_history(fitness_history)
     if display:
         display.update_scatter(0, fitness_history)
 
     for generation in range(generations):
-        #parents = select_tournaments(population, fitness_values, pop_size // 2)
-        parents = select(population, fitness_values, pop_size // 2)
+        parents = select_tournaments(population, fitness_values, pop_size // 2)
+        #parents = select(population, fitness_values, pop_size // 2)
 
         # Crossover
         next_generation = []
@@ -290,7 +360,10 @@ def genetic_algorithm(pop_size, generations, max_iter, save_tiled_base=None, plo
         # Mutation
         next_generation = [mutate(child) for child in next_generation]
         population = parents + next_generation
-        fitness_imgs = [fitness_function(ind[0], ind[1], max_iter=ind[2]) for ind in population]
+        if CLIP:
+            fitness_imgs = [fitness_function_clip(ind[0], ind[1], max_iter=ind[2], bands=ind[3], cmap=ind[4]) for ind in population]
+        else:
+            fitness_imgs = [fitness_function(ind[0], ind[1], max_iter=ind[2], bands=ind[3], cmap=ind[4]) for ind in population]
         fitness_values, images = zip(*fitness_imgs)
 
         tiled = tile_images(images)
@@ -300,11 +373,12 @@ def genetic_algorithm(pop_size, generations, max_iter, save_tiled_base=None, plo
         #_img = Image.fromarray(tiled, "L")
         #_img.save(f"{save_base}_gen{generation+1:03}.png")
         print(f"Generation {generation + 1}: Best fitness = {max(fitness_values)}")
-        c, window_size, iteration, bands = population[fitness_values.index(max(fitness_values))]
-        print(f"c={c}, window_size={window_size}, iteration={iteration}, bands={bands}")
+        c, window_size, iteration, bands, cmap = population[fitness_values.index(max(fitness_values))]
+        print(f"c={c}, window_size={window_size}, iteration={iteration}, bands={bands}, cmap={cmap}")
         best_image, _ = plot_julia_set(c, window_size, width=100, height=60,
-                                    colourmap="twilight", bands=bands, max_iter=iteration)
+                                    colourmap=cmap, bands=bands, max_iter=iteration)
         fitness_history.append(fitness_values)
+        np.save("fitness_history", fitness_history)
         if display:
             display.update_image(1, best_image)
             display.update_scatter(0, fitness_history)
@@ -338,10 +412,11 @@ if __name__ == "__main__":
             max_iter=140, save_tiled_base=None, plot=args["display"])
 
     # Plot the best Julia set found, scaled to 800x480
-    c, window_size, iteration, bands = best_individual
-    print(f"c={c}, window_size={window_size}, iteration={iteration}, bands={bands}")
-    _, save_path = plot_julia_set(c, window_size, width=800, height=480, bands=bands, max_iter=iteration,
-                   colourmap="RANDOM", save_base=args["save_dir"])
+    c, window_size, iteration, bands, cmap = best_individual
+    print(f"c={c}, window_size={window_size}, iteration={iteration}, bands={bands}, cmap={cmap}")
+    _, save_path = plot_julia_set(
+            c, window_size, width=800, height=480, bands=bands, max_iter=iteration,
+            colourmap=cmap, save_base=args["save_dir"])
 
     if args["save_dir"]:
         shared_fullpath = os.path.join(args["save_dir"], "output.png")
