@@ -63,8 +63,10 @@ run `sudo raspi-config` and enable **SPI interface** and **I2C interface**
 
 Firstly download this repo somewhere with:
 
-``` cd ~/ sudo apt install git git clone
-https://github.com/dylski/PaperPiAI.git
+```
+cd ~/
+sudo apt install git
+git clone https://github.com/dylski/PaperPiAI.git
 ```
 
 `PaperPiAI/scripts/install.sh` has all the commands needed to install all the
