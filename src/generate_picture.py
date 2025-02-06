@@ -15,23 +15,18 @@ def choose_prompt(filename: str):
 
 parser = argparse.ArgumentParser(description="Generate a new random picture.")
 parser.add_argument("output_dir", help="Directory to save the output images")
-parser.add_argument("--prompts", default="flowers.json", help="The prompts file to use")
+parser.add_argument("--prompts", default="prompts/flowers.json", help="The prompts file to use")
 parser.add_argument("--prompt", default="", help="The prompt to use")
 parser.add_argument("--seed", default=random.randint(1, 10000), help="The seed to use")
 parser.add_argument("--steps", default=5, help="The number of steps to perform")
 parser.add_argument("--width", default=800, help="The width of the image to generate")
 parser.add_argument("--height", default=480, help="The height of the image to generate")
+parser.add_argument("--sd", default="OnnxStream/src/build/sd", help="Path to the stable diffusion binary")
+parser.add_argument("--model", default="models/stable-diffusion-xl-turbo-1.0-anyshape-onnxstream", help="Path to the stable diffusion model to use")
 args = parser.parse_args()
-
-# Set the paths
-installed_dir = "/home/dylski/Projects/PaperPiAI"
-installed_dir = "./"
-sd_bin = f"{installed_dir}/OnnxStream/src/build/sd"
-sd_model = f"{installed_dir}/models/stable-diffusion-xl-turbo-1.0-anyshape-onnxstream"
 
 output_dir = args.output_dir
 shared_file = 'output.png'
-
 
 # Select a random subject and art style
 prompt = args.prompt
@@ -44,9 +39,9 @@ fullpath = os.path.join(output_dir, f"{unique_arg}.png")
 
 # Construct the command
 cmd = [
-    sd_bin,
+    args.sd,
     "--xl", "--turbo",
-    "--models-path", sd_model,
+    "--models-path", args.model,
     "--rpi-lowmem",
     "--prompt", prompt,
     "--seed", str(args.seed),
@@ -66,4 +61,3 @@ print("Command executed successfully.")
 shared_fullpath = os.path.join(output_dir, shared_file)
 shutil.copyfile(fullpath, shared_fullpath)
 print(f"Copied to {shared_fullpath}") 
-
