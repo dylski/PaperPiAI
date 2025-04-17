@@ -10,13 +10,17 @@ import shutil
 from skimage.measure import shannon_entropy
 import torch
 
-cmap_names = ['cool', 'twilight', 'magma', 'cividis', 'vanimo', 
-      'afmhot', 'hsv', 'YlGn', 'autumn', 'Spectral', 'coolwarm', 
-      'inferno', 'seismic', 'managua', 'pink', 'summer', 'YlOrRd', 
-      'twilight_shifted', 'winter', 'copper', 'PiYG', 'PuOr', 'plasma', 
-      'gist_heat', 'Wistia', 'BrBG', 'berlin', 'hot', 'turbo', 'bwr', 
+MAX_BANDS = 8
+
+cmap_names = ['cool', 'magma', 'cividis', 
+      'afmhot', 'hsv', 'Spectral', 'coolwarm', 
+      'inferno', 'seismic', 'pink', 'summer', 'YlOrRd', 
+      'copper', 'PiYG', 'PuOr', 'plasma', 
+      'gist_heat', 'Wistia', 'BrBG', 'hot', 'turbo', 'bwr', 
       'RdYlGn', 'viridis', 'RdGy', 'YlGnBu', 'RdBu', 'RdYlBu', 'spring', 
-      'PRGn']
+      'PRGn', 'gist_gray'
+      # 'YlGn', 'autumn', "winter", 'twilight', 'twilight_shifted', 
+      ]
 
 def julia_set(c, window_size, width, height, bands, max_iter=40):
     """Generate a Julia set image with a dynamic window around the complex number c."""
@@ -51,7 +55,7 @@ def julia_set(c, window_size, width, height, bands, max_iter=40):
 
 
 def plot_julia_set(c, window_size, width, height, max_iter=40,
-                   colourmap=None, invert=False, bands=0, save_base=None):
+                   colourmap=None, invert=False, bands=1, save_base=None):
   """
   Generates and saves a Julia set image.
 
@@ -72,7 +76,8 @@ def plot_julia_set(c, window_size, width, height, max_iter=40,
   aspect_ratio = height / width
 
   # Generate the Julia set image
-  img = julia_set(c, window_size, width, height, bands, max_iter)
+  num_bands = np.floor((1.4 ** bands) * 3) 
+  img = julia_set(c, window_size, width, height, num_bands, max_iter)
   img = img.astype(float)
   img -= np.min(img)
   max_val = np.max(img)
@@ -197,7 +202,7 @@ def initialize_population(pop_size, max_iter):
         complex_num = complex(real, imag)
         window_size = random.uniform(1.0, 2.0)  # Start with a random window size
         iterations = random.randint(40, max_iter)  # Random number of iterations
-        bands = random.randint(5, 140)  # Random number of iterations
+        bands = random.randint(1, MAX_BANDS)  # Random number of iterations
         cmap = random.choice(cmap_names)
         population.append((complex_num, window_size, iterations, bands, cmap))
     return population
@@ -263,7 +268,7 @@ def mutate(individual):
 
     elif mutation_type == 'bands':
         individual[3] = min(
-            140, max(5, individual[3] + random.randint(-10, 10) * mutation_rate))
+            MAX_BANDS, max(1, individual[3] + random.randint(-2, 2) * mutation_rate))
 
     elif mutation_type == 'cmap':
         individual[4] = random.choice(cmap_names)
@@ -309,7 +314,7 @@ def select_tournaments(population, fitness_values, num_parents):
 
     return winners
 
-CLIP = True  # False  # True
+CLIP = False  #True  # False  # True
 
 def genetic_algorithm(pop_size, generations, max_iter, save_tiled_base=None, plot=False):
     if plot:
@@ -346,8 +351,8 @@ def genetic_algorithm(pop_size, generations, max_iter, save_tiled_base=None, plo
         display.update_scatter(0, fitness_history)
 
     for generation in range(generations):
-        parents = select_tournaments(population, fitness_values, pop_size // 2)
-        #parents = select(population, fitness_values, pop_size // 2)
+        #parents = select_tournaments(population, fitness_values, pop_size // 2)
+        parents = select(population, fitness_values, pop_size // 2)
 
         # Crossover
         next_generation = []
