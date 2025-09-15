@@ -136,10 +136,23 @@ flags to see full usage.
 
 ## Automating
 
-To automate this I make a script that runs these two commands in sequence and
-put an entry in crontab to call it once a day. Note that e-paper displays are
-suspectible to temperature. The Pi Zero will get hot for an extended period of
-time which can cause the display to render with some discoloration which can be
+To automate and generate an image per day created an executable script called `cron_flower` that runs the generation and display code. My version contains the following lines:
+
+```#!/bin/bash
+cd "/home/dylski"
+./venv/bin/python PaperPiAI/src/generate_picture.py --width 800 --height 480 images
+./venv/bin/python PaperPiAI/src/display_picture.py -r images/output.png
+```
+Obviously change yours to point to where your code is.
+
+Then I added the entry in crontab (run `crontab -e` to edit your crontab file):
+`0 0 * * * /home/dylski/bin/cron_flower`
+to run `cron_flower` every day at midnight.
+
+Note that e-paper displays are
+suspectible to temperature. Depending on your Pi Zero's environment, it 
+may get hot for an extended period of
+time which could cause the display to render with some discoloration. This can be
 avoided by delaying the display update after generating the image.
 
 ## Prompts
