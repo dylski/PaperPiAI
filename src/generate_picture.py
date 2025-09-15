@@ -34,7 +34,8 @@ if prompt == '':
     prompt = choose_prompt(args.prompts)
 
 # Create a unique argument for the filename
-unique_arg = f"{prompt.replace(' ', '_')}_seed_{args.seed}_steps_{args.steps}"
+unique_arg = prompt.replace(' ', '_')[:64]
+unique_arg = f"{unique_arg}_seed_{args.seed}_steps_{args.steps}"
 fullpath = os.path.join(output_dir, f"{unique_arg}.png")
 
 # Construct the command
