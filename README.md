@@ -1,5 +1,6 @@
 # Updates
 
+* 24th Nov 2025: Inky 13.3" support with latest Trixie OS
 * 1st Jan 2025: Added support for OnnxStream's new custom resolutions and updated some documentation.
 Special thanks to [Vito Plantamura](https://github.com/vitoplantamura), [Delph](https://github.com/Delph) and [Roger](https://github.com/g7ruh)
 
@@ -180,3 +181,121 @@ to
 
 and comment out lines 61 - 63.
 
+# Inky 13.3" Update
+
+To use PaperPiAI on an Inky 13.3" screen with Trixie (Debian 13) takes a little exta wrangling as RAM is tight. Here are the instructions for maximising free memory which worked for me. 
+
+Steps 1-3 are probably the most critical for memory. Step 5 important to install latest inky module (the script in the repo forces an older 1.50 version needed for the 7.3" screens).
+
+## 1\. Disable ZRAM-based swap and Maximize Swap File Size
+
+Trixie defaults to **ZRAM** (compressed RAM swap), which uses precious physical memory. We must disable it and enforce a large $\mathbf{2\text{GB}}$ swap file on the SD card using `rpi-swap`.
+
+1.  **Stop the default ZRAM service:**
+    ```bash
+    sudo systemctl stop dev-zram0.swap
+    ```
+2.  **Use `rpi-swap` to create a 2GB persistent swapfile:**
+      * Ensure the `rpi-swap` package is installed: `sudo apt install rpi-swap`
+      * Create the configuration file to override the ZRAM default:
+        ```bash
+        sudo nano /etc/rpi/swap.conf.d/80-use-swapfile.conf
+        ```
+      * Add the following content to set the Swapfile mechanism and a fixed size of **2048MiB (2GB)**:
+        ```ini
+        [Main]
+        Mechanism=swapfile
+        [File]
+        FixedSizeMiB=2048
+        ```
+      * **Reboot** the Pi immediately for this change to take effect: `sudo reboot`
+3.  **Verify the change** after rebooting by checking the swap size:
+    ```bash
+    free -m
+    ```
+
+-----
+
+## 2\. Lower Kernel Memory Reservation (`vm.min_free_kbytes`)
+
+This parameter reserves a block of RAM for the kernel. By default, it's too large ($\mathbf{16\text{MB}}$) for a 512MB system and effectively triggers an OOM killer.
+
+1.  Edit the system configuration file:
+    ```bash
+    sudo nano /etc/sysctl.d/98-rpi.conf
+    ```
+2.  Change the line `vm.min_free_kbytes = 16384` to the minimum safe limit of **1024** (1MB):
+    ```
+    vm.min_free_kbytes = 1024
+    ```
+
+-----
+
+## 3\. Aggressively Use Swap (`vm.swappiness`)
+
+This tells the kernel to aggressively use the new 2GB swap file to push idle data out of physical RAM, keeping it clear for the demanding Stable Diffusion job.
+
+1.  In the same configuration file (`98-rpi.conf`), add this setting:
+    ```
+    vm.swappiness = 90
+    ```
+2.  Apply the changes immediately:
+    ```bash
+    sudo sysctl --load /etc/sysctl.d/98-rpi.conf
+    ```
+
+-----
+
+## 4\. Disable Unnecessary System Services (Optional?)
+
+Disable background services that consume memory but are not required for a headless e-ink frame. You can run `systemctl list-units --type=servive --state=running` to get a list of running services. I don't know how much these helped but I disabled modem, avah1 (makes the rpi discoverable on the intranet - I'm logging in locally or with IP address) and bluetooth.
+
+```bash
+# Stop and disable Mobile Broadband Manager
+sudo systemctl disable ModemManager.service
+sudo systemctl stop ModemManager.service
+
+# Stop and disable Zeroconf/mDNS service discovery
+sudo systemctl disable avahi-daemon.service
+sudo systemctl stop avahi-daemon.service
+
+# Stop and disable bluetooth Daemon
+sudo systemctl disable bluetooth.service
+sudo systemctl stop bluetooth.service
+```
+
+
+## 5\. Update Inky Library (For Inky 13.3")
+If you are using a Pimoroni Inky display (or run into driver issues), ensure the inky package is the latest version, as older versions may have compatibility issues with newer OS kernels or Python versions.
+
+Upgrade command:
+
+```Bash
+
+# Assuming you are in your virtual environment
+python -m pip install inky[rpi] --upgrade
+```
+B. Display Resolution in Configuration
+The default scripts often target smaller displays. You must specify the correct resolution 1600x1200 for your 13.3" display when running the generation script.
+
+Example for 1600x1200 resolution (Landscape):
+
+```Bash
+
+# Generate the image
+venv/bin/python src/generate_picture.py --width=1600 --height=1200 output_dir
+
+# Display the image
+venv/bin/python src/display_picture.py output_dir/output.png
+```
+
+For Portrait orientation, swap the width/height and add the -p flag:
+
+```Bash
+
+# Generate the image
+venv/bin/python src/generate_picture.py --width=1200 --height=1600 output_dir
+
+# Display the image (note the -p flag)
+venv/bin/python src/display_picture.py -p output_dir/output.png
+```
