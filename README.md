@@ -186,15 +186,10 @@ Here is a complete Markdown section for your `PaperPiAI` README.
 
 -----
 
-## ⚙️ Button Monitor and Image Cycling (`display_button.py`)
+## Button Control for Image Cycling and Shutdown (`display_button.py`)
 
-The `display_button.py` script provides a **low-CPU, kernel-level** method for monitoring the physical buttons attached to your Inky display. It allows you to cycle through your processed images, select specific ones, and execute a shutdown command without needing to access a desktop or SSH session.
-
-### Key Features
-
-  * **Efficient Monitoring:** Uses the modern Linux **`gpiod`** library for event-driven GPIO monitoring, ensuring **minimal CPU load** while waiting for a button press.
-  * **Image Cycling:** The script manages the list of generated PNG files (excluding the active `output.png`) and uses `shutil.copy2` to preserve file timestamps, enabling reliable cycling through images chronologically.
-  * **External Rendering:** After an image is selected, the script automatically calls your main `display_picture.py` program to render the new `output.png` file to the e-paper display.
+The `display_button.py` script monitors the physical buttons attached to your Inky display.
+It allows you to cycle through your processed images, select specific ones, and execute a shutdown command without needing to access a desktop or SSH session.
 
 ### Button Functionality
 
@@ -209,7 +204,14 @@ The `display_button.py` script provides a **low-CPU, kernel-level** method for m
 
 -----
 
-## 🚀 Running on Boot (Systemd Service)
+## Install GPIO modules
+
+```bash
+venv/bin/python -m pip install gpiod
+venv/bin/python -m pip install gpiodevice
+```
+
+## Running on Boot (Systemd Service)
 
 To ensure the button monitoring starts automatically and runs reliably in the background, you should set it up as a **Systemd Service**.
 
