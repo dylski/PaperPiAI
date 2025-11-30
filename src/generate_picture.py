@@ -55,7 +55,7 @@ cmd = [
 print(f"Creating image with prompt '{prompt}'")
 print(f"Using seed {args.seed}")
 print(f"Saving to {fullpath}")
-print(f"Running command:\n{cmd}")
+print(f'Running command:\n{" ".join(cmd)}')
 subprocess.run(cmd)
 print("Command executed successfully.")
 

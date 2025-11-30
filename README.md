@@ -1,6 +1,7 @@
 # Updates
 
-* 24th Nov 2025: Inky 13.3" support with latest Trixie OS
+* 30th Nov 2025: Buttons to move through previous images (and shotdown).
+* 24th Nov 2025: Inky 13.3" support notes.
 * 1st Jan 2025: Added support for OnnxStream's new custom resolutions and updated some documentation.
 Special thanks to [Vito Plantamura](https://github.com/vitoplantamura), [Delph](https://github.com/Delph) and [Roger](https://github.com/g7ruh)
 
@@ -181,91 +182,91 @@ to
 
 and comment out lines 61 - 63.
 
-# Inky 13.3" Update
-
-To use PaperPiAI on an Inky 13.3" screen with Trixie (Debian 13) takes a little exta wrangling as RAM is tight. Here are the instructions for maximising free memory which worked for me. 
-
-Steps 1-3 are probably the most critical for memory. Step 5 important to install latest inky module (the script in the repo forces an older 1.50 version needed for the 7.3" screens).
-
-## 1\. Disable ZRAM-based swap and Maximize Swap File Size
-
-Trixie defaults to **ZRAM** (compressed RAM swap), which uses precious physical memory. We must disable it and enforce a large $\mathbf{2\text{GB}}$ swap file on the SD card using `rpi-swap`.
-
-1.  **Stop the default ZRAM service:**
-    ```bash
-    sudo systemctl stop dev-zram0.swap
-    ```
-2.  **Use `rpi-swap` to create a 2GB persistent swapfile:**
-      * Ensure the `rpi-swap` package is installed: `sudo apt install rpi-swap`
-      * Create the configuration file to override the ZRAM default:
-        ```bash
-        sudo nano /etc/rpi/swap.conf.d/80-use-swapfile.conf
-        ```
-      * Add the following content to set the Swapfile mechanism and a fixed size of **2048MiB (2GB)**:
-        ```ini
-        [Main]
-        Mechanism=swapfile
-        [File]
-        FixedSizeMiB=2048
-        ```
-      * **Reboot** the Pi immediately for this change to take effect: `sudo reboot`
-3.  **Verify the change** after rebooting by checking the swap size:
-    ```bash
-    free -m
-    ```
+Here is a complete Markdown section for your `PaperPiAI` README.
 
 -----
 
-## 2\. Lower Kernel Memory Reservation (`vm.min_free_kbytes`)
+## ⚙️ Button Monitor and Image Cycling (`display_button.py`)
 
-This parameter reserves a block of RAM for the kernel. By default, it's too large ($\mathbf{16\text{MB}}$) for a 512MB system and effectively triggers an OOM killer.
+The `display_button.py` script provides a **low-CPU, kernel-level** method for monitoring the physical buttons attached to your Inky display. It allows you to cycle through your processed images, select specific ones, and execute a shutdown command without needing to access a desktop or SSH session.
 
-1.  Edit the system configuration file:
-    ```bash
-    sudo nano /etc/sysctl.d/98-rpi.conf
-    ```
-2.  Change the line `vm.min_free_kbytes = 16384` to the minimum safe limit of **1024** (1MB):
-    ```
-    vm.min_free_kbytes = 1024
-    ```
+### Key Features
 
------
+  * **Efficient Monitoring:** Uses the modern Linux **`gpiod`** library for event-driven GPIO monitoring, ensuring **minimal CPU load** while waiting for a button press.
+  * **Image Cycling:** The script manages the list of generated PNG files (excluding the active `output.png`) and uses `shutil.copy2` to preserve file timestamps, enabling reliable cycling through images chronologically.
+  * **External Rendering:** After an image is selected, the script automatically calls your main `display_picture.py` program to render the new `output.png` file to the e-paper display.
 
-## 3\. Aggressively Use Swap (`vm.swappiness`)
+### Button Functionality
 
-This tells the kernel to aggressively use the new 2GB swap file to push idle data out of physical RAM, keeping it clear for the demanding Stable Diffusion job.
+| Button | GPIO Pin (BCM) | Functionality |
+| :----: | :------------: | :------------ |
+| **A** | 5              | Selects and displays the **Latest** generated image (newest timestamp). |
+| **B** | 6              | **Step Backwards** in time (selects the next **Oldest** image relative to the current `output.png`). |
+| **C** | 25 / 16\* | **Step Forwards** in time (selects the next **Newest** image relative to the current `output.png`). |
+| **D** | 24             | Executes **`sudo shutdown now`** to safely power down the Raspberry Pi. |
 
-1.  In the same configuration file (`98-rpi.conf`), add this setting:
-    ```
-    vm.swappiness = 90
-    ```
-2.  Apply the changes immediately:
-    ```bash
-    sudo sysctl --load /etc/sysctl.d/98-rpi.conf
-    ```
+\* **Note on Button C Pin:** The script defines the pin for Button C as **25** for users with the **Inky Impression 13.3"** display. If you are using an Inky Impression 7.3" or other common pHATs, change the `SW_C` value in the script from `25` back to **`16`** to ensure proper operation.
 
 -----
 
-## 4\. Disable Unnecessary System Services (Optional?)
+## 🚀 Running on Boot (Systemd Service)
 
-Disable background services that consume memory but are not required for a headless e-ink frame. You can run `systemctl list-units --type=servive --state=running` to get a list of running services. I don't know how much these helped but I disabled modem, avah1 (makes the rpi discoverable on the intranet - I'm logging in locally or with IP address) and bluetooth.
+To ensure the button monitoring starts automatically and runs reliably in the background, you should set it up as a **Systemd Service**.
+
+### 1\. Create the Service File
+
+Create a new service definition file using `sudo`:
 
 ```bash
-# Stop and disable Mobile Broadband Manager
-sudo systemctl disable ModemManager.service
-sudo systemctl stop ModemManager.service
-
-# Stop and disable Zeroconf/mDNS service discovery
-sudo systemctl disable avahi-daemon.service
-sudo systemctl stop avahi-daemon.service
-
-# Stop and disable bluetooth Daemon
-sudo systemctl disable bluetooth.service
-sudo systemctl stop bluetooth.service
+sudo nano /etc/systemd/system/display-button-monitor.service
 ```
 
+Paste the following content, ensuring the `User` and `ExecStart` path match your environment:
 
-## 5\. Update Inky Library (For Inky 13.3")
+```ini
+[Unit]
+Description=PaperPiAI Button Monitor (gpiod)
+# Wait for basic networking, but not for the desktop environment
+After=network.target
+
+[Service]
+# Replace 'dylski' with your actual username
+User=dylski
+# Adjust the path to where your virtual environment and script are located
+ExecStart=/home/dylski/venv/bin/python3 /home/dylski/projects/PaperPiAI/src/display_button.py
+# If the script exits unexpectedly, restart it after 5 seconds
+Restart=always
+RestartSec=5
+
+[Install]
+# Ensure it is started during the multi-user boot phase
+WantedBy=multi-user.target
+```
+
+### 2\. Enable and Start the Service
+
+Use the following commands to register, enable, and start the monitor:
+
+```bash
+# Reload the systemd manager configuration
+sudo systemctl daemon-reload
+
+# Enable the service to start automatically on every boot
+sudo systemctl enable display-button-monitor.service
+
+# Start the service immediately
+sudo systemctl start display-button-monitor.service
+
+# Check the service status and logs
+sudo systemctl status display-button-monitor.service
+```
+
+The script will now run silently in the background, waiting for button presses.
+
+# Inky 13.3" Update
+
+To use PaperPiAI on an Inky 13.3" screen stick with the bullseye OS version - I tried removing zram, minimising GPU RAM and system services but it would still sometimes reboot mid run.
+
 If you are using a Pimoroni Inky display (or run into driver issues), ensure the inky package is the latest version, as older versions may have compatibility issues with newer OS kernels or Python versions.
 
 Upgrade command:
@@ -276,17 +277,17 @@ Upgrade command:
 python -m pip install inky[rpi] --upgrade
 ```
 B. Display Resolution in Configuration
-The default scripts often target smaller displays. You must specify the correct resolution 1600x1200 for your 13.3" display when running the generation script.
+The default scripts often target smaller displays. You must specify the correct resolution 1600x1200 for your 13.3" display when running the generation script. Values must be multiples of 32 so 1600x1216 is good.
 
 Example for 1600x1200 resolution (Landscape):
 
 ```Bash
 
 # Generate the image
-venv/bin/python src/generate_picture.py --width=1600 --height=1200 output_dir
+venv/bin/python src/generate_picture.py --width=1600 --height=1216 output_dir
 
 # Display the image
-venv/bin/python src/display_picture.py output_dir/output.png
+venv/bin/python src/display_picture.py -r output_dir/output.png
 ```
 
 For Portrait orientation, swap the width/height and add the -p flag:
@@ -294,8 +295,8 @@ For Portrait orientation, swap the width/height and add the -p flag:
 ```Bash
 
 # Generate the image
-venv/bin/python src/generate_picture.py --width=1200 --height=1600 output_dir
+venv/bin/python src/generate_picture.py --width=1216 --height=1600 output_dir
 
 # Display the image (note the -p flag)
-venv/bin/python src/display_picture.py -p output_dir/output.png
+venv/bin/python src/display_picture.py -r -p output_dir/output.png
 ```
