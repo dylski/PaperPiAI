@@ -1,6 +1,6 @@
 # Updates
 
-* 30th Nov 2025: Buttons to move through previous images (and shotdown).
+* 30th Nov 2025: Buttons to move through previous images (and shutdown).
 * 24th Nov 2025: Inky 13.3" support notes.
 * 1st Jan 2025: Added support for OnnxStream's new custom resolutions and updated some documentation.
 Special thanks to [Vito Plantamura](https://github.com/vitoplantamura), [Delph](https://github.com/Delph) and [Roger](https://github.com/g7ruh)
@@ -186,9 +186,9 @@ Here is a complete Markdown section for your `PaperPiAI` README.
 
 -----
 
-## Button Control for Image Cycling and Shutdown (`display_button.py`)
+## Button Control for Image Cycling and Shutdown (`display_buttons.py`)
 
-The `display_button.py` script monitors the physical buttons attached to your Inky display.
+The `display_buttons.py` script monitors the physical buttons attached to your Inky display.
 It allows you to cycle through your processed images, select specific ones, and execute a shutdown command without needing to access a desktop or SSH session.
 
 ### Button Functionality
@@ -235,7 +235,7 @@ After=network.target
 # Replace 'dylski' with your actual username
 User=dylski
 # Adjust the path to where your virtual environment and script are located
-ExecStart=/home/dylski/venv/bin/python3 /home/dylski/projects/PaperPiAI/src/display_button.py
+ExecStart=/home/dylski/venv/bin/python3 /home/dylski/projects/PaperPiAI/src/display_buttons.py
 # If the script exits unexpectedly, restart it after 5 seconds
 Restart=always
 RestartSec=5
