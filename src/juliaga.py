@@ -314,9 +314,10 @@ def select_tournaments(population, fitness_values, num_parents):
 
     return winners
 
-CLIP = False  #True  # False  # True
+CLIP = False
 
 def genetic_algorithm(pop_size, generations, max_iter, save_tiled_base=None, plot=False):
+    global CLIP
     if plot:
         import display_manager as dm
         display = dm.DisplayManager(num_images=2, num_plots=1)
@@ -332,7 +333,7 @@ def genetic_algorithm(pop_size, generations, max_iter, save_tiled_base=None, plo
     fitness_values, images = zip(*fitness_imgs)
     tiled = (tile_images(images) * 255).astype(np.uint8)
     if save_tiled_base:
-        _img = Image.fromarray(tiled, "L")
+        _img = Image.fromarray(tiled, "RGB")
         _img.save(f"{save_tiled_base}_gen{0:03}.png")
     if display:
         display.update_image(0, tiled)
@@ -351,8 +352,13 @@ def genetic_algorithm(pop_size, generations, max_iter, save_tiled_base=None, plo
         display.update_scatter(0, fitness_history)
 
     for generation in range(generations):
-        #parents = select_tournaments(population, fitness_values, pop_size // 2)
-        parents = select(population, fitness_values, pop_size // 2)
+        CLIP = not CLIP  # Alternate between CLIP and non-CLIP fitness
+        
+        # Select parents from mini tournaments.
+        parents = select_tournaments(population, fitness_values, pop_size // 2)
+
+        # Elitism selection (uncomment to use)
+        #parents = select(population, fitness_values, pop_size // 2)
 
         # Crossover
         next_generation = []
@@ -372,9 +378,12 @@ def genetic_algorithm(pop_size, generations, max_iter, save_tiled_base=None, plo
         fitness_values, images = zip(*fitness_imgs)
 
         tiled = tile_images(images)
+        tiled = (tiled * 255).astype(np.uint8)
+        if save_tiled_base:
+            _img = Image.fromarray(tiled, "RGB")
+            _img.save(f"{save_tiled_base}_gen{generation+1:03}.png")
         if display:
             display.update_image(0, tiled)
-        tiled = (tiled * 255).astype(np.uint8)
         #_img = Image.fromarray(tiled, "L")
         #_img.save(f"{save_base}_gen{generation+1:03}.png")
         print(f"Generation {generation + 1}: Best fitness = {max(fitness_values)}")
@@ -411,10 +420,17 @@ if __name__ == "__main__":
     args = vars(ap.parse_args())
 
     assert int(args["population"]) % 4 == 0, "Population must be multiple of 4"
+    save_tiled_base = None
+    if args["save_dir"]:
+        if not os.path.exists(args["save_dir"]):
+            os.makedirs(args["save_dir"])
+        if args["tiled"]:
+            save_tiled_base = os.path.join(args["save_dir"], "tiled")
+
     # Run the genetic algorithm
     best_individual = genetic_algorithm(
             pop_size=int(args["population"]), generations=int(args["generations"]),
-            max_iter=140, save_tiled_base=None, plot=args["display"])
+            max_iter=140, save_tiled_base=save_tiled_base, plot=args["display"])
 
     # Plot the best Julia set found, scaled to 800x480
     c, window_size, iteration, bands, cmap = best_individual
