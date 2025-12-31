@@ -20,7 +20,6 @@ DISPLAY_CMD = [
     "/home/dylski/venv/bin/python3",
     "/home/dylski/projects/PaperPiAI/src/display_picture.py",
     "-r",
-    "-p",
     DISPLAY_IMAGE
 ]
 
