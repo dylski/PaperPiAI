@@ -44,9 +44,7 @@ the image. This was needed in an earlier version when we could only generate
 * Picture frame, ideally with deep frame to accommodate RPi Zero
 * Heatsink (optional) - I saw a max of 70°C (ambient was ~21°C) but one might
   be useful in a hot area or confined space
-* **Raspbian Bullseye Lite**. A similar set-up ought to work with Bookwork
-  (install inky 2.0 using Pimoroni's instructions) but I had odd slowdowns
-using Bookwork which I could not resolve.
+* **Raspbian Bullseye Lite**. I have failed to get it working on Trixie ([see here](https://github.com/dylski/PaperPiAI/issues/22#issuecomment-3718491877)) and Bookworm (which had odd slowdowns).
 
 ##  Increase swapfile size for compilation
 
