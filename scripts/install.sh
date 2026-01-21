@@ -23,21 +23,11 @@ python -m pip install pillow
 # Following instructions taken directly from [OnnxStream repo](https://github.com/vitoplantamura/OnnxStream).
 
 cd "$INSTALL_DIR"
-git clone https://github.com/google/XNNPACK.git
-cd XNNPACK
-git checkout 1c8ee1b68f3a3e0847ec3c53c186c5909fa3fbd3
-mkdir build
-cd build
-cmake -DXNNPACK_BUILD_TESTS=OFF -DXNNPACK_BUILD_BENCHMARKS=OFF ..
-cmake --build . --config Release
- 
-cd "$INSTALL_DIR"
 git clone https://github.com/vitoplantamura/OnnxStream.git
-cd OnnxStream
-cd src
+cd OnnxStream/src
 mkdir build
 cd build
-cmake -DMAX_SPEED=ON -DOS_LLM=OFF -DOS_CUDA=OFF -DXNNPACK_DIR="${INSTALL_DIR}/XNNPACK" ..
+cmake ..
 cmake --build . --config Release
 
 cd "$INSTALL_DIR"
