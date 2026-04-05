@@ -180,7 +180,6 @@ to
 
 and comment out lines 61 - 63.
 
-Here is a complete Markdown section for your `PaperPiAI` README.
 
 -----
 
