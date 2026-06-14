@@ -102,8 +102,11 @@ if __name__ == "__main__":
                     default=False, help="Do not interact with e-paper display to get resolution")
     ap.add_argument("--width", default=800, help="The width of the display")
     ap.add_argument("--height", default=480, help="The height of the display")
-    args = vars(ap.parse_args())
 
+    # Unknown args, such as "--type spectra13", will be passed onto inky module.
+    known_args, unknown_args = ap.parse_known_args()
+    args = vars(known_args)
+    
     disp_w, disp_h = args["width"], args["height"]
     simulate_display = args["simulate_display"]
 
